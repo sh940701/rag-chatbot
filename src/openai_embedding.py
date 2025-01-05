@@ -12,8 +12,15 @@ def load_openai_api_key():
 
 def get_embeddings(texts: list, model: str = "text-embedding-3-small") -> list:
     try:
-        response = openai.embeddings.create(input=texts, model=model)
-        embeddings = [item.embedding for item in response.data]
+        embeddings = []
+        batch_size = 50  # 배치 크기
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]  # 50개 단위로 분할
+            print(f"Batch {i // batch_size + 1}: Processing {len(batch)} items")
+            response = openai.embeddings.create(input=batch, model=model)
+            batch_embeddings = [item.embedding for item in response.data]
+            embeddings.extend(batch_embeddings)  # 결과를 누적
         return embeddings
     except Exception as e:
         print(f"Embedding 생성 실패: {e}")
