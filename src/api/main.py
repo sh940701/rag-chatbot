@@ -79,20 +79,38 @@ def chat(query_request: QueryRequest):
         raise HTTPException(status_code=400, detail="질문이 비어 있습니다.")
 
     try:
-        # 질의 Embedding 생성
+        # 1) 사용자 입력을 임베딩
         query_embedding = create_query_embedding(client, user_query)
-        logging.info("질의 Embedding 생성 완료")
 
-        # 유사한 FAQ 검색
-        results = search_faq(collection, query_embedding)
+        # 2) FAQ 검색 → top_k=5개
+        results = search_faq(collection, query_embedding, top_k=5)
         logging.info("유사한 FAQ 검색 완료")
 
-        # 답변 추출
-        answers = get_answers_from_results(results, df_embeddings)
-        logging.info("답변 추출 완료")
+        # 3) 상위 3개는 답변용, 나머지 2개는 추천 질문용
+        top_3_results = {
+            'documents': [results['documents'][0][:3]],
+            'metadatas': [results['metadatas'][0][:3]]
+        }
+        # 나머지 2개
+        recommended_results = {
+            'documents': [results['documents'][0][3:]],
+            'metadatas': [results['metadatas'][0][3:]]
+        }
 
-        # LLM을 사용하여 최종 응답 생성
-        llm_response = generate_response(client, answers, user_query)
+        # 4) 실제 답변 text 추출
+        answers_for_llm = get_answers_from_results(top_3_results, df_embeddings)
+        logging.info("FAQ 답변 추출 완료")
+
+        # 5) 추천 질문 text 추출
+        recommended_questions = [doc for doc in recommended_results['documents'][0]]
+
+        # 6) LLM 호출 (한 번의 프롬프트로 답변 + 연관 질문 생성)
+        llm_response = generate_response(
+            client=client,
+            faq_answers=answers_for_llm,            # 상위 3개 FAQ의 답변
+            related_questions=recommended_questions, # 추천질문으로 쓸 FAQ의 질문들
+            user_query=user_query
+        )
         logging.info("LLM 응답 생성 완료")
 
         return ResponseModel(response=llm_response)
