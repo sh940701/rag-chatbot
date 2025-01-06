@@ -12,7 +12,7 @@ def search_faq(collection, query_embedding: list, top_k: int = 3):
         results = collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            include=['metadatas', 'documents']
+            include=['metadatas', 'documents', 'distances']
         )
         return results
     except Exception as e:

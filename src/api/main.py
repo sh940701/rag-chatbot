@@ -53,6 +53,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
+
 app = FastAPI(
     title="SmartStore FAQ Chatbot API",
     description="A Retrieval-Augmented Generation (RAG) based chatbot for Naver Smart Store FAQs.",
@@ -68,9 +69,11 @@ from fastapi import Request
 templates = Jinja2Templates(directory="./templates")
 app.mount("/static", StaticFiles(directory="./static"), name="static")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def get_chat(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.post("/chat", response_model=ResponseModel)
 def chat(query_request: QueryRequest):
@@ -85,6 +88,18 @@ def chat(query_request: QueryRequest):
         # 2) FAQ 검색 → top_k=5개
         results = search_faq(collection, query_embedding, top_k=5)
         logging.info("유사한 FAQ 검색 완료")
+
+        distances = results.get('distances', [1.0])
+        # print(distances)
+        min_distance = min(distances[0])
+        threshold = 1.0
+
+        if min_distance > threshold:
+            # 유사도 점수가 낮아 연관성이 없는 경우
+            logging.info(f"FAQ 유사도 점수 낮음 (min_distance={min_distance}), LLM 호출 생략")
+            return {
+                "response": "질문과 관련된 FAQ가 없습니다. 다시 시도해 주세요."
+            }
 
         # 3) 상위 3개는 답변용, 나머지 2개는 추천 질문용
         top_3_results = {
@@ -107,8 +122,8 @@ def chat(query_request: QueryRequest):
         # 6) LLM 호출 (한 번의 프롬프트로 답변 + 연관 질문 생성)
         llm_response = generate_response(
             client=client,
-            faq_answers=answers_for_llm,            # 상위 3개 FAQ의 답변
-            related_questions=recommended_questions, # 추천질문으로 쓸 FAQ의 질문들
+            faq_answers=answers_for_llm,  # 상위 3개 FAQ의 답변
+            related_questions=recommended_questions,  # 추천질문으로 쓸 FAQ의 질문들
             user_query=user_query
         )
         logging.info("LLM 응답 생성 완료")
