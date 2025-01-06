@@ -23,8 +23,6 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    /* 둥근 모서리 필요 없으면 0, 필요하면 적당히 조절 */
-    border-radius: 0;
 }
 
 /* 상단 헤더 */
@@ -46,7 +44,7 @@ body {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
-    background-color: #fafafa; /* 안쪽 흰색(연한회색) 배경 */
+    background-color: #fafafa;
 }
 
 /* 입력 폼 */
@@ -133,6 +131,8 @@ body {
     background-color: #007bff;
     color: #ffffff;
     border-bottom-right-radius: 0;
+    text-align: left; /* 메시지 텍스트는 왼쪽 정렬 유지 */
+    margin-right: 10px;
 }
 
 /* 봇 메시지 */
@@ -148,7 +148,7 @@ body {
 
 /* 로딩 인디케이터도 bot 스타일로(말풍선 유지) */
 .loading-indicator .text {
-    background-color: #eaeaea; /* 봇 말풍선 색 */
+    background-color: #eaeaea;
     border-bottom-left-radius: 0;
     display: flex;
     align-items: center;
@@ -161,10 +161,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 간격을 좀 더 넓게 (예: width 90px) */
     width: 90px;
     height: 20px;
-    gap: 10px; /* dot 사이 간격 증가 */
+    gap: 10px; /* dot 사이 간격 */
 }
 
 .spinner > div {
@@ -190,4 +189,26 @@ body {
     40% {
         transform: scale(1);
     }
+}
+
+/* ------ 추천 질문 구분 ------ */
+.recommended-title {
+    font-weight: 600;
+    margin: 8px 0 4px 0; /* 제목 상하 여백 조정 */
+    color: #333;
+    font-size: 0.9rem;
+}
+
+/* 실제 추천 질문 */
+.recommended-question {
+    display: block;          /* 줄바꿈 형태로 배치 */
+    margin: 4px 0;           /* 기존보다 여백을 최소화 */
+    color: #007bff;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.recommended-question:hover {
+    color: #0056b3; /* 호버 시 색상 변경 */
+    text-decoration: underline;
 }
