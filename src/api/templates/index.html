@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartStore FAQ Chatbot</title>
+    <!-- 구글 폰트 예시: 오픈 산스/나눔 고딕 등 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<!-- chat-container: 화면 가득 차도록 구성 -->
+<div class="chat-container">
+    <!-- 상단 헤더 영역 -->
+    <header class="chat-header">
+        <h1>SmartStore FAQ Chatbot</h1>
+    </header>
+
+    <!-- 채팅 영역 -->
+    <div id="chat-box" class="chat-box"></div>
+
+    <!-- 입력 영역 -->
+    <form id="chat-form" class="chat-form">
+        <input type="text" id="query" name="query" placeholder="질문을 입력하세요..." required>
+        <button type="submit">전송</button>
+    </form>
+</div>
+
+<!-- JS 로직 -->
+<script src="/static/script.js"></script>
+</body>
+</html>
