@@ -19,7 +19,7 @@ def search_faq(collection, query_embedding: list, top_k: int = 5):
         logging.error(f"FAQ 검색 실패: {e}")
         raise
 
-def get_answer_from_results(results, df: pd.DataFrame):
+def get_answers_from_results(results, df: pd.DataFrame):
     answers = []
     for i in range(len(results['documents'][0])):
         question = results['documents'][0][i]
@@ -51,7 +51,7 @@ def main():
 
     results = search_faq(collection, query_embedding, top_k=5)
 
-    answers = get_answer_from_results(results, df_embeddings)
+    answers = get_answers_from_results(results, df_embeddings)
 
     print("\n검색된 FAQ 답변:")
     for idx, answer in enumerate(answers, 1):
