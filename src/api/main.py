@@ -60,6 +60,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
+
+templates = Jinja2Templates(directory="./templates")
+app.mount("/static", StaticFiles(directory="./static"), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def get_chat(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
 @app.post("/chat", response_model=ResponseModel)
 def chat(query_request: QueryRequest):
     user_query = query_request.query
