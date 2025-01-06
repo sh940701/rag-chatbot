@@ -10,10 +10,14 @@ def initialize_chroma(db_path: str = "../data/chroma_db") -> chromadb.Client:
 
 
 def create_collection(client: chromadb.Client, collection_name: str = "faq_embeddings"):
-    if collection_name not in client.list_collections():
-        collection = client.create_collection(name=collection_name)
-    else:
-        collection = client.get_collection(name=collection_name)
+    try:
+        if collection_name not in client.list_collections():
+            collection = client.create_collection(name=collection_name)
+        else:
+            collection = client.get_collection(name=collection_name)
+    except Exception as e:
+        print(f"collection 로드 실패: {e}")
+        raise
     return collection
 
 
