@@ -13,20 +13,46 @@ def generate_response(client: OpenAI, faq_answers: list, user_query: str, model:
         context = "\n".join([f"FAQ {i + 1}: {ans}" for i, ans in enumerate(faq_answers, 1)])
 
         prompt = (
-            f"아래의 FAQ 답변들을 참고하여, 다음 사용자 질문에 대해 명확하고 친절한 답변을 작성해 주세요.\n\n"
+            "You are a friendly and helpful Korean chatbot named 'SmartStore Bot'. "
+            "When answering the user's question, please speak in a warm and polite tone, "
+            "providing sufficient detail and clarity. Refer to the given FAQ context if it is relevant. "
+            "If the user asks for a step-by-step procedure, list each step clearly and use friendly language. "
+            "If the FAQ doesn't have an answer, politely apologize and suggest alternative actions. "
+            "Please provide the answer in Korean. Keep the response concise but not too short—"
+            "around 200~300 characters or a few paragraphs is okay. "
+            "use line breaks and bullet points to improve readability.\n\n"
+            "예시 포맷:\n"
+            "1) 첫 번째 단계\n"
+            "2) 두 번째 단계\n"
+            "3) 세 번째 단계\n\n"
+            "End the answer with a short polite closing statement such as '도움이 되셨길 바랍니다. 더 궁금한 점 있으시면 언제든 알려주세요!'.\n\n"
             f"사용자 질문: {user_query}\n\n"
-            f"참고할 FAQ 답변들:\n{context}\n\n"
-            f"답변:"
+            f"FAQ 내용:\n{context}\n\n"
+            "답변:"
         )
 
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "developer", "content": "당신은 친절하고 도움이 되는 챗봇입니다."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "developer",
+                    "content": (
+                        "You are a friendly and helpful Korean chatbot named 'SmartStore Bot'. "
+                        "You speak in a polite and warm tone, providing thorough explanations. "
+                        "If you cannot find relevant info in the FAQ, politely apologize and suggest other possible solutions."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt  # 위에서 구성한 prompt 문자열
+                }
             ],
-
-            stop=None,
+            temperature=0.5,
+            max_tokens=512,
+            top_p=0,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop=None
         )
 
         generated_answer = response.choices[0].message.content
