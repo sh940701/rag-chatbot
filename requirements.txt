@@ -3,3 +3,5 @@ pandas
 openai
 chromadb
 python-dotenv
+fastapi
+uvicorn
