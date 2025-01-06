@@ -7,7 +7,7 @@ from src.create_query_embedding_openai import create_query_embedding
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def search_faq(collection, query_embedding: list, top_k: int = 5):
+def search_faq(collection, query_embedding: list, top_k: int = 3):
     try:
         results = collection.query(
             query_embeddings=[query_embedding],
