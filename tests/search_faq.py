@@ -3,7 +3,7 @@ import pandas as pd
 
 from src.openai_embedding import load_openai_api_key
 from src.vector_db import initialize_chroma, create_collection, load_embeddings_from_csv
-from tests.query_embedding import create_query_embedding
+from src.create_query_embedding_openai import create_query_embedding
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
