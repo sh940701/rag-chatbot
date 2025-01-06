@@ -42,7 +42,7 @@ def generate_response(
         "If the FAQ doesn't have an answer, politely apologize and suggest alternative actions. "
         "Please provide the answer in Korean. Keep the response concise but not too short—"
         "around 200~300 characters or a few paragraphs is okay. "
-        "Use line breaks to improve readability, but avoid using Markdown.\n\n"
+        "Use line breaks to improve readability, but avoid using Markdown like Bold.\n\n"
         "예시 포맷:\n"
         "1) 첫 번째 작업을 설명합니다.\n"
         "2) 두 번째 작업을 설명합니다.\n"
@@ -81,9 +81,8 @@ def generate_response(
                     "content": prompt
                 }
             ],
-            temperature=0.5,
-            max_tokens=512,
-            top_p=1,
+            temperature=0.4,
+            top_p=0.9,
             frequency_penalty=0,
             presence_penalty=0,
             stop=None
