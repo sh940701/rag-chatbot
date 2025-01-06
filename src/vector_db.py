@@ -49,9 +49,9 @@ def insert_embeddings(collection, df: pd.DataFrame):
 if __name__ == "__main__":
     embedding_csv_path = "../data/embeddings_openai.csv"
 
-    client = initialize_chroma()
+    chroma_client = initialize_chroma()
 
-    collection = create_collection(client)
+    collection = create_collection(chroma_client)
 
     df_embeddings = load_embeddings_from_csv(embedding_csv_path)
 

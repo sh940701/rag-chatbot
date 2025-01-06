@@ -31,15 +31,15 @@ def get_answer_from_results(results, df: pd.DataFrame):
     return answers
 
 def main():
-    load_openai_api_key()
+    client = load_openai_api_key()
 
-    client = initialize_chroma()
+    chroma_client = initialize_chroma()
 
     try:
-        collection = create_collection(client)
+        collection = create_collection(chroma_client)
         logging.info(f"컬렉션 '{collection}' 로드 완료")
     except Exception as e:
-        logging.error(f"컬렉션 '{collection}'을(를) 찾을 수 없습니다: {e}")
+        logging.error(f"컬렉션을 찾을 수 없습니다: {e}")
         return
 
     embedding_csv_path = "../data/embeddings_openai.csv"
@@ -47,7 +47,7 @@ def main():
 
     user_query = input("질문을 입력하세요: ")
 
-    query_embedding = create_query_embedding(user_query)
+    query_embedding = create_query_embedding(client, user_query)
 
     results = search_faq(collection, query_embedding, top_k=5)
 
