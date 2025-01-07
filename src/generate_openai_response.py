@@ -1,7 +1,9 @@
+import asyncio
+import json
 import logging
 
 import openai
-from openai import OpenAI
+from openai import OpenAI, Stream
 
 from src.openai_embedding import load_openai_api_key
 
@@ -95,6 +97,83 @@ def generate_response(
     except Exception as e:
         logging.error(f"LLM 응답 생성 실패: {e}")
         raise
+
+
+async def stream_sync_to_async(stream: Stream):
+    """
+    동기 스트림을 비동기적으로 변환
+    """
+    for item in stream:
+        await asyncio.sleep(0)  # 이벤트 루프에 양보
+        yield item
+
+async def generate_response_sse(client: OpenAI, user_query, faq_context, recommended_context, model: str = "gpt-4o-mini"):
+    # 최종 프롬프트
+    prompt = (
+        "You are a friendly and helpful Korean chatbot named 'SmartStore Bot'. "
+        "When answering the user's question, please speak in a warm and polite tone, "
+        "providing sufficient detail and clarity. Refer to the given FAQ context if it is relevant. "
+        "If the user asks for a step-by-step procedure, list each step clearly and use friendly language. "
+        "If the FAQ doesn't have an answer, politely apologize and suggest alternative actions. "
+        "Please provide the answer in Korean. Keep the response concise but not too short—"
+        "around 200~300 characters or a few paragraphs is okay. "
+        "If you cannot find relevant info in the FAQ, politely apologize and only say '지금 말씀하신 질문은 FaQ 에 포함되어 있지 않습니다.'."
+        "Use line breaks to improve readability, but avoid using Markdown like Bold.\n\n"
+        "예시 포맷:\n"
+        "1) 첫 번째 작업을 설명합니다.\n"
+        "2) 두 번째 작업을 설명합니다.\n"
+        "3) 세 번째 작업을 설명합니다.\n\n"
+        "End the answer with a short polite closing statement such as '도움이 되셨길 바랍니다. 더 궁금한 점 있으시면 언제든 알려주세요!'.\n\n"
+
+        f"사용자 질문: {user_query}\n\n"
+        f"FAQ 답변 정보:\n{faq_context}\n"
+        f"연관 질문 후보:\n{recommended_context}\n"
+
+        "아래 형식을 참고하여 답변을 작성하세요:\n"
+        "-----\n"
+        "답변:\n"
+        "(FAQ들을 참조해서 사용자 질문에 대한 답변을 작성)\n\n"
+        "추천 질문:\n"
+        "(연관 질문 후보 중 2~3개를 자연스럽게 나열)\n"
+        "-----\n"
+        "답변:"
+    )
+
+    try:
+        # stream=True 를 사용한 ChatCompletion
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "developer",
+                    "content": (
+                        "You are a friendly and helpful Korean chatbot named 'SmartStore Bot'. "
+                        "You speak in a polite and warm tone, providing thorough explanations. "
+                        # "If you cannot find relevant info in the FAQ, politely apologize only."
+                    )
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            top_p=0.9,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stream=True,
+        )
+
+
+        async for chunk in stream_sync_to_async(response):  # 비동기적으로 chunk를 처리
+            chunk_content = chunk.choices[0].delta.content
+            print(chunk_content)
+            if chunk_content:
+                yield json.dumps({"status": "processing", "data": chunk_content}, ensure_ascii=False)
+
+        # 스트리밍 완료
+        yield json.dumps({"status": "complete", "data": "Stream finished"}, ensure_ascii=False)
+
+    except Exception as e:
+        logging.error(f"LLM 응답 생성 실패: {e}")
+        yield json.dumps({"status": "error", "data": str(e)}, ensure_ascii=False)
 
 
 if __name__ == "__main__":

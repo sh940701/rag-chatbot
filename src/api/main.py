@@ -1,11 +1,16 @@
+import asyncio
+import json
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from openai import Stream
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import logging
 
 from src.create_query_embedding_openai import create_query_embedding
-from src.generate_openai_response import generate_response
+from src.generate_openai_response import generate_response_sse
 from src.openai_embedding import load_openai_api_key
 from src.search_faq import search_faq, get_answers_from_results
 from src.vector_db import initialize_chroma, load_embeddings_from_csv
@@ -17,12 +22,15 @@ collection = None
 df_embeddings = None
 client = None
 
+
 # Pydantic 모델 정의
 class QueryRequest(BaseModel):
     query: str
 
-class ResponseModel(BaseModel):
-    response: str
+
+# class ResponseModel(BaseModel):
+#     response: str
+
 
 # lifespan 핸들러
 @asynccontextmanager
@@ -75,8 +83,8 @@ async def get_chat(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.post("/chat", response_model=ResponseModel)
-def chat(query_request: QueryRequest):
+@app.post("/chat")
+async def chat(query_request: QueryRequest):
     user_query = query_request.query
     if not user_query:
         raise HTTPException(status_code=400, detail="질문이 비어 있습니다.")
@@ -88,18 +96,16 @@ def chat(query_request: QueryRequest):
         # 2) FAQ 검색 → top_k=5개
         results = search_faq(collection, query_embedding, top_k=5)
         logging.info("유사한 FAQ 검색 완료")
-
-        distances = results.get('distances', [1.0])
-        # print(distances)
-        min_distance = min(distances[0])
-        threshold = 1.0
-
-        if min_distance > threshold:
-            # 유사도 점수가 낮아 연관성이 없는 경우
-            logging.info(f"FAQ 유사도 점수 낮음 (min_distance={min_distance}), LLM 호출 생략")
-            return {
-                "response": "질문과 관련된 FAQ가 없습니다. 다시 시도해 주세요."
-            }
+        #
+        # distances = results.get('distances', [1.0])
+        # # print(distances)
+        # min_distance = min(distances[0])
+        # threshold = 1.0
+        #
+        # if min_distance > threshold:
+        #     # 유사도 점수가 낮아 연관성이 없는 경우
+        #     logging.info(f"FAQ 유사도 점수 낮음 (min_distance={min_distance}), LLM 호출 생략")
+        #     return StreamingResponse{"status": "complete", "data": "질문과 관련된 FAQ가 없습니다. 다시 시도해 주세요."}
 
         # 3) 상위 3개는 답변용, 나머지 2개는 추천 질문용
         top_3_results = {
@@ -119,16 +125,18 @@ def chat(query_request: QueryRequest):
         # 5) 추천 질문 text 추출
         recommended_questions = [doc for doc in recommended_results['documents'][0]]
 
-        # 6) LLM 호출 (한 번의 프롬프트로 답변 + 연관 질문 생성)
-        llm_response = generate_response(
-            client=client,
-            faq_answers=answers_for_llm,  # 상위 3개 FAQ의 답변
-            related_questions=recommended_questions,  # 추천질문으로 쓸 FAQ의 질문들
-            user_query=user_query
-        )
-        logging.info("LLM 응답 생성 완료")
+        faq_context = ""
+        for i, ans in enumerate(answers_for_llm):
+            faq_context += f"FAQ {i + 1} Answer:\n{ans}\n\n"
 
-        return ResponseModel(response=llm_response)
+        # 추천 질문 컨텍스트 구성
+        recommended_context = ""
+        for i, q in enumerate(recommended_questions):
+            recommended_context += f"- {q}\n"
+
+        return StreamingResponse(generate_response_sse(client, user_query, faq_context, recommended_context),
+                                 media_type="text/event-stream")
+
 
     except Exception as e:
         logging.error(f"챗봇 응답 생성 실패: {e}")
@@ -136,4 +144,4 @@ def chat(query_request: QueryRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
