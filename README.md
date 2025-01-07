@@ -22,3 +22,7 @@
 - `cd ..`
 - `python3 main.py` -> 서버 실행
 - `http://localhost:8001` 접속
+
+## 실행 화면
+![capture1.png](./static/capture1.png)
+![capture2.png](./static/capture2.png)
