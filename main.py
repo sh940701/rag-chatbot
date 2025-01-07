@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     logging.info("OpenAI API 키 로드 완료")
 
     # Chroma 클라이언트 초기화
-    db_path: str = "../../data/chroma_db"
+    db_path: str = "data/chroma_db"
     chroma_client = initialize_chroma(db_path)
     logging.info("ChromaDB 클라이언트 초기화 완료")
 
@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
         raise e
 
     # Embedding 데이터 로드
-    embedding_csv_path = "../../data/embeddings_openai.csv"
+    embedding_csv_path = "data/embeddings_openai.csv"
     df_embeddings = load_embeddings_from_csv(embedding_csv_path)
     logging.info("Embedding 데이터 로드 완료")
 
