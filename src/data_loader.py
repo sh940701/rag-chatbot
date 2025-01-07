@@ -133,8 +133,5 @@ if __name__ == "__main__":
         # 전처리된 데이터를 저장
         df.to_pickle("../data/preprocessed_data.pkl")
         print("전처리 완료 및 저장")
-
-        # PyCharm에서 디버깅 시 DataFrame을 전체 확인할 수 있도록 breakpoint 설정
-        breakpoint()
     else:
         print("DataFrame이 비어 있어 전처리를 수행하지 않습니다.")
