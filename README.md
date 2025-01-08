@@ -5,7 +5,7 @@
 ## 프로젝트 구조
 
 - `src/` - 소스 코드
-- `data/` - 데이터 파일
+- `data/` - 데이터 파일, 참고 링크: https://help.sell.smartstore.naver.com/index.help
 - `models/` - 임베딩 모델 및 벡터 데이터베이스
 - `api/` - API 서버 구현
 
