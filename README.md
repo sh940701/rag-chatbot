@@ -8,8 +8,6 @@
 - `data/` - 데이터 파일
 - `models/` - 임베딩 모델 및 벡터 데이터베이스
 - `api/` - API 서버 구현
-- `tests/` - 테스트 스크립트
-- `docs/` - 문서
 
 ## 실행 방법
 - .env 파일 추가 -> `OPENAI_API_KEY`
