@@ -14,7 +14,6 @@
 ## 실행 방법
 - .env 파일 추가 -> `OPENAI_API_KEY`
 - 의존성 설치 `pip install -r requirements.txt`
-- 프로젝트 root 에 `/data/final_result.pkl` 파일 추가
 - `cd src`
 - `python3 data_loader.py` -> 데이터 전처리
 - `python3 create_origin_embeddings_openai.py` -> 데이터 임베딩
