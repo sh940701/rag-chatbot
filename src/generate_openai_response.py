@@ -164,7 +164,6 @@ async def generate_response_sse(client: OpenAI, user_query, faq_context, recomme
 
         async for chunk in stream_sync_to_async(response):  # 비동기적으로 chunk를 처리
             chunk_content = chunk.choices[0].delta.content
-            print(chunk_content)
             if chunk_content:
                 yield json.dumps({"status": "processing", "data": chunk_content}, ensure_ascii=False)
 
