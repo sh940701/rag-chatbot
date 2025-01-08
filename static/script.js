@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const queryInput = document.getElementById("query");
 
     let loadingIndicator = null;
+    let eventSource = null; // EventSource 객체 추가
 
     // 1) 환영 메시지
     addMessage("bot", "안녕하세요! SmartStore FaQ 봇입니다.\n무엇을 도와드릴까요?");
@@ -21,96 +22,64 @@ document.addEventListener("DOMContentLoaded", function () {
         // 로딩 표시
         showLoadingIndicator();
 
-        // SSE 방식으로 서버 요청
-        fetchSSE(query);
+        // 서버로 쿼리 전송
+        sendQuery(query);
     });
 
     /**
-     * SSE로 서버 호출하는 메서드
+     * 서버로 쿼리를 전송하는 함수
      */
-    async function fetchSSE(query) {
+    async function sendQuery(query) {
         try {
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "text/event-stream"
-                },
-                body: JSON.stringify({ query })
-            });
-
-            if (!response.ok) {
-                hideLoadingIndicator();
-                throw new Error("챗봇 응답에 실패했습니다.");
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
+            // EventSource를 사용하여 스트림을 수신
+            const url = `/chat?query=${encodeURIComponent(query)}`;
+            eventSource = new EventSource(url);
 
             // 아직 완성되지 않은 bot 메시지 노드
-            let botMsgDiv = addMessage("bot", ""); // 처음엔 빈 문자열
-            let botResponse = ""; // 스트리밍 전체 텍스트 누적
+            let botMsgDiv = null
+            let botResponse = "";
 
-            let firstChunkArrived = false; // 첫 chunk 여부
+            eventSource.onmessage = function (event) {
+                try {
+                    const parsed = JSON.parse(event.data);
+                    const status = parsed.status;
+                    const data = parsed.data;
 
-            async function readStream() {
-                let isDone = false;
-                while (!isDone) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        isDone = true;
-                        console.log("Stream done.");
-
-                        // 스트리밍 종료 시점에 최종 파싱 (추천 질문 레이아웃 등)
-                        hideLoadingIndicator(); //念
-
-                        // botResponse 최종 파싱 → 추천 질문 렌더링
-                        finalizeBotResponse(botMsgDiv, botResponse);
-
-                        break;
-                    }
-
-                    // chunk
-                    const chunkText = decoder.decode(value, { stream: true });
-                    const lines = chunkText.split("\n");
-
-                    for (let line of lines) {
-                        let trimmedLine = line.trim();
-                        if (!trimmedLine) continue;
-
-                        try {
-                            const parsed = JSON.parse(trimmedLine);
-                            const status = parsed.status;
-                            const data = parsed.data;
-
-                            if (status === "processing") {
-                                // 첫 번째 chunk라면 로딩인디케이터 제거
-                                if (!firstChunkArrived) {
-                                    firstChunkArrived = true;
-                                    hideLoadingIndicator();
-                                }
-                                // 토큰 누적
-                                botResponse += data;
-                                // 실시간으로 메시지를 갱신
-                                botMsgDiv.querySelector(".text").textContent = botResponse;
-                                scrollToBottom();
-
-                            } else if (status === "complete") {
-                                console.log("SSE complete:", data);
-                            } else if (status === "error") {
-                                botMsgDiv.querySelector(".text").textContent = `Error: ${data}`;
-                                hideLoadingIndicator();
-                                isDone = true;
-                                break;
-                            }
-                        } catch (err) {
-                            console.error("JSON parse error:", err, line);
+                    if (status === "processing") {
+                        // 첫 chunk가 도착했을 때만 봇 메시지 노드를 생성
+                        if (!botMsgDiv) {
+                            hideLoadingIndicator();
+                            botMsgDiv = addMessage("bot", "");
                         }
-                    }
-                }
-            }
 
-            await readStream();
+                        // 실시간으로 메시지를 갱신
+                        botMsgDiv.querySelector(".text").textContent += data;
+                        botResponse += data
+                        hideLoadingIndicator();
+                        scrollToBottom();
+                    } else if (status === "complete") {
+                        // 스트림 종료
+                        finalizeBotResponse(botMsgDiv, botResponse);
+                        hideLoadingIndicator();
+                        eventSource.close();
+                    } else if (status === "error") {
+                        botMsgDiv.querySelector(".text").textContent = `Error: ${data}`;
+                        hideLoadingIndicator();
+                        eventSource.close();
+                        console.error("서버에서 오류가 발생했습니다:", data);
+                    }
+                } catch (err) {
+                    console.error("JSON parse error:", err, event.data);
+                }
+            };
+
+            eventSource.onerror = function (err) {
+                console.error("EventSource failed:", err);
+                hideLoadingIndicator();
+                addMessage("bot", "죄송합니다. 현재 응답을 생성할 수 없습니다.");
+                eventSource.close();
+            };
+
         } catch (error) {
             console.error("Error:", error);
             hideLoadingIndicator();
@@ -175,94 +144,11 @@ document.addEventListener("DOMContentLoaded", function () {
         queryInput.value = "";
         scrollToBottom();
 
+        // 로딩 표시
         showLoadingIndicator();
 
-        try {
-            // SSE로 다시
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "text/event-stream"
-                },
-                body: JSON.stringify({ query })
-            });
-
-            if (!response.ok) {
-                hideLoadingIndicator();
-                throw new Error("챗봇 응답에 실패했습니다.");
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-
-            let botMsgDiv = addMessage("bot", "");
-            let botResponse = "";
-            let firstChunkArrived = false;
-
-            async function readStream() {
-                let isDone = false;
-                while (!isDone) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        isDone = true;
-                        console.log("Stream done.");
-
-                        // 스트리밍 종료 시점에 최종 파싱 (추천 질문 레이아웃 등)
-                        hideLoadingIndicator(); //念
-
-                        // botResponse 최종 파싱 → 추천 질문 렌더링
-                        finalizeBotResponse(botMsgDiv, botResponse);
-
-                        break;
-                    }
-
-                    // chunk
-                    const chunkText = decoder.decode(value, { stream: true });
-                    const lines = chunkText.split("\n");
-
-                    for (let line of lines) {
-                        let trimmedLine = line.trim();
-                        if (!trimmedLine) continue;
-
-                        try {
-                            const parsed = JSON.parse(trimmedLine);
-                            const status = parsed.status;
-                            const data = parsed.data;
-
-                            if (status === "processing") {
-                                // 첫 번째 chunk라면 로딩인디케이터 제거
-                                if (!firstChunkArrived) {
-                                    firstChunkArrived = true;
-                                    hideLoadingIndicator();
-                                }
-                                // 토큰 누적
-                                botResponse += data;
-                                // 실시간으로 메시지를 갱신
-                                botMsgDiv.querySelector(".text").textContent = botResponse;
-                                scrollToBottom();
-
-                            } else if (status === "complete") {
-                                console.log("SSE complete:", data);
-                            } else if (status === "error") {
-                                botMsgDiv.querySelector(".text").textContent = `Error: ${data}`;
-                                hideLoadingIndicator();
-                                isDone = true;
-                                break;
-                            }
-                        } catch (err) {
-                            console.error("JSON parse error:", err, line);
-                        }
-                    }
-                }
-            }
-            await readStream();
-        } catch (err) {
-            console.error("Error:", err);
-            hideLoadingIndicator();
-            addMessage("bot", "죄송합니다. 현재 응답을 생성할 수 없습니다.");
-            scrollToBottom();
-        }
+        // 서버로 쿼리 전송
+        await sendQuery(query);
     }
 
     function addMessage(sender, text) {
@@ -338,12 +224,18 @@ document.addEventListener("DOMContentLoaded", function () {
     function escapeHTML(str) {
         return str.replace(/[&<>"']/g, function (m) {
             switch (m) {
-                case '&': return '&amp;';
-                case '<': return '&lt;';
-                case '>': return '&gt;';
-                case '"': return '&quot;';
-                case "'": return '&#39;';
-                default: return m;
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#39;';
+                default:
+                    return m;
             }
         });
     }

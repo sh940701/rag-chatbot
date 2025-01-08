@@ -83,9 +83,9 @@ async def get_chat(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.post("/chat")
-async def chat(query_request: QueryRequest):
-    user_query = query_request.query
+@app.get("/chat")
+async def chat(query: str):
+    user_query = query
     if not user_query:
         raise HTTPException(status_code=400, detail="질문이 비어 있습니다.")
 
@@ -96,16 +96,21 @@ async def chat(query_request: QueryRequest):
         # 2) FAQ 검색 → top_k=5개
         results = search_faq(collection, query_embedding, top_k=5)
         logging.info("유사한 FAQ 검색 완료")
-        #
-        # distances = results.get('distances', [1.0])
-        # # print(distances)
-        # min_distance = min(distances[0])
-        # threshold = 1.0
-        #
-        # if min_distance > threshold:
-        #     # 유사도 점수가 낮아 연관성이 없는 경우
-        #     logging.info(f"FAQ 유사도 점수 낮음 (min_distance={min_distance}), LLM 호출 생략")
-        #     return StreamingResponse{"status": "complete", "data": "질문과 관련된 FAQ가 없습니다. 다시 시도해 주세요."}
+
+        distances = results.get('distances', [1.0])
+        # print(distances)
+        min_distance = min(distances[0])
+        threshold = 1.0
+
+        if min_distance > threshold:
+            # 유사도 점수가 낮아 연관성이 없는 경우
+            logging.info(f"FAQ 유사도 점수 낮음 (min_distance={min_distance}), LLM 호출 생략")
+
+            def generate_error():
+                yield f"data: {json.dumps({'status': 'processing', 'data': '질문과 관련된 FAQ가 없습니다. 다시 시도해 주세요.'}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'status': 'complete', 'data': 'Stream finished'}, ensure_ascii=False)}\n\n"
+
+            return StreamingResponse(generate_error(), media_type="text/event-stream")
 
         # 3) 상위 3개는 답변용, 나머지 2개는 추천 질문용
         top_3_results = {

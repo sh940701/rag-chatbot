@@ -165,14 +165,14 @@ async def generate_response_sse(client: OpenAI, user_query, faq_context, recomme
         async for chunk in stream_sync_to_async(response):  # 비동기적으로 chunk를 처리
             chunk_content = chunk.choices[0].delta.content
             if chunk_content:
-                yield json.dumps({"status": "processing", "data": chunk_content}, ensure_ascii=False)
+                yield f"data: {json.dumps({'status': 'processing', 'data': chunk_content}, ensure_ascii=False)}\n\n"
 
         # 스트리밍 완료
-        yield json.dumps({"status": "complete", "data": "Stream finished"}, ensure_ascii=False)
+        yield f"data: {json.dumps({'status': 'complete', 'data': 'Stream finished'}, ensure_ascii=False)}\n\n"
 
     except Exception as e:
         logging.error(f"LLM 응답 생성 실패: {e}")
-        yield json.dumps({"status": "error", "data": str(e)}, ensure_ascii=False)
+        yield f"data: {json.dumps({'status': 'error', 'data': str(e)}, ensure_ascii=False)}\n\n"
 
 
 if __name__ == "__main__":
